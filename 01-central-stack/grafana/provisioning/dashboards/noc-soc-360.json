@@ -1,0 +1,274 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "# 🛡️ Tour de Contrôle Unifiée NOC / SOC 360° — Architecture 4 Couches (Mininet OVS `span0` + Suricata IDS + Kubernetes `kind` + Alloy + VictoriaMetrics / Loki / ClickHouse)",
+        "mode": "markdown"
+      },
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "victoriametrics-uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 85 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 2 },
+      "id": 2,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "title": "CPU Utilisation Globale (NOC)",
+      "targets": [
+        {
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)",
+          "refId": "A"
+        }
+      ],
+      "type": "gauge"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "victoriametrics-uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 75 },
+              { "color": "red", "value": 90 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 2 },
+      "id": 3,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "title": "RAM Utilisée (NOC - Stack Complète)",
+      "targets": [
+        {
+          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+          "refId": "A"
+        }
+      ],
+      "type": "gauge"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki-uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 2 },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "🚨 Alertes Critiques Suricata IDS (SOC)",
+      "targets": [
+        {
+          "expr": "sum(count_over_time({job=\"suricata-ids\"} |= \"\\\"event_type\\\":\\\"alert\\\"\" [1h]))",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki-uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 2 },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "📦 Événements Logs Conteneurs & K8s (Kind)",
+      "targets": [
+        {
+          "expr": "sum(count_over_time({job=\"docker-containers\"}[1h]))",
+          "refId": "A"
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "victoriametrics-uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 25,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 7, "w": 10, "x": 0, "y": 6 },
+      "id": 6,
+      "title": "🌐 Trafic Réseau Temps Réel (VictoriaMetrics : OVS s1, Port Miroir span0 & eth0)",
+      "targets": [
+        {
+          "expr": "rate(node_network_receive_bytes_total{device=~\"span0|s1.*|eth0|docker0\"}[1m])",
+          "legendFormat": "RX {{device}}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(node_network_transmit_bytes_total{device=~\"span0|s1.*|eth0|docker0\"}[1m])",
+          "legendFormat": "TX {{device}}",
+          "refId": "B"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki-uid" },
+      "gridPos": { "h": 7, "w": 14, "x": 10, "y": 6 },
+      "id": 7,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "title": "🚨 Détections d'Attaques Suricata IDS en Temps Réel (Loki : Port Miroir Mininet span0 -> eve.json)",
+      "targets": [
+        {
+          "expr": "{job=\"suricata-ids\"} |= \"\\\"event_type\\\":\\\"alert\\\"\" | json | line_format \"🔥 [Sévérité {{.alert_severity}}] {{.alert_signature}} ➔ Attaquant: {{.src_ip}}:{{.src_port}} -> Cible: {{.dest_ip}}:{{.dest_port}} ({{.proto}})\"",
+          "refId": "A"
+        }
+      ],
+      "type": "logs"
+    },
+    {
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-uid" },
+      "gridPos": { "h": 7, "w": 13, "x": 0, "y": 13 },
+      "id": 9,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "title": "🕵️ Forensics Flux Réseau (ClickHouse : Table ntopng.flows capturée sur span0)",
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse-uid" },
+          "queryType": "sql",
+          "rawSql": "SELECT timestamp AS Horodatage, src_ip AS Source, dest_ip AS Destination, dest_port AS Port, proto AS Proto, app_proto AS DPI_L7, bytes_toserver AS Octets, security_status AS Qualification_SOC FROM ntopng.flows ORDER BY timestamp DESC LIMIT 15",
+          "refId": "A",
+          "format": 1
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki-uid" },
+      "gridPos": { "h": 7, "w": 11, "x": 13, "y": 13 },
+      "id": 8,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "title": "☸️ Journaux Unifiés : Cluster Kubernetes (Kind), Conteneurs Docker & Syslog",
+      "targets": [
+        {
+          "expr": "{job=~\"docker-containers|linux-syslog\"}",
+          "refId": "A"
+        }
+      ],
+      "type": "logs"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["noc", "soc", "suricata", "mininet", "kind", "clickhouse"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "title": "Tour de Contrôle NOC / SOC 360° (Mininet + Suricata + Kind)",
+  "uid": "noc-soc-360-main",
+  "version": 5
+}

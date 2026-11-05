@@ -1,4 +1,5 @@
-# Données persistantes des conteneurs (ne pas pousser sur GitHub)
+# Données persistantes des conteneurs et VM locale (ne pas pousser sur GitHub)
+vm/
 data/
 *.log
 *.pcap

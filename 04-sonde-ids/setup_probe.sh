@@ -13,10 +13,13 @@
 set -e
 
 echo "======================================================================"
-echo " [ÉTAPE 1/4] Installation de Mininet, Open vSwitch et outils de test"
+echo " [ÉTAPE 1/4] Installation de Docker, Mininet, Open vSwitch et outils"
 echo "======================================================================"
+export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
 sudo apt-get install -y \
+  docker.io \
+  docker-compose-v2 \
   mininet \
   openvswitch-switch \
   nmap \
@@ -24,6 +27,9 @@ sudo apt-get install -y \
   jq \
   tcpdump \
   python3-pip
+
+sudo systemctl enable --now docker
+sudo systemctl enable --now openvswitch-switch
 
 echo "======================================================================"
 echo " [ÉTAPE 2/4] Installation de Suricata IDS (Détection d'intrusion SOC)"
