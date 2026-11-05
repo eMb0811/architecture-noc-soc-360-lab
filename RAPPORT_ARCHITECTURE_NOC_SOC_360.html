@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rapport d'Architecture & Implémentation — Système d'Observabilité NOC/SOC 360°</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 14mm 15mm 14mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      font-size: 10pt;
+      line-height: 1.48;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 15px;
+    }
+    .cover-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%);
+      color: #ffffff;
+      padding: 28px 30px;
+      border-radius: 10px;
+      margin-bottom: 22px;
+      box-shadow: 0 4px 15px rgba(15, 23, 42, 0.15);
+    }
+    .cover-header .subtitle {
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+      color: #93c5fd;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .cover-header h1 {
+      font-size: 19pt;
+      font-weight: 800;
+      line-height: 1.22;
+      margin-bottom: 10px;
+    }
+    .cover-header p {
+      font-size: 9.8pt;
+      color: #e2e8f0;
+      margin-bottom: 12px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      padding-top: 12px;
+      font-size: 8.8pt;
+    }
+    .meta-item strong {
+      color: #93c5fd;
+      display: block;
+      font-size: 8pt;
+      text-transform: uppercase;
+    }
+    h2 {
+      font-size: 13pt;
+      color: #0f172a;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 4px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 10.8pt;
+      color: #1d4ed8;
+      margin-top: 12px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+    p {
+      margin-bottom: 8px;
+      text-align: justify;
+    }
+    ul, ol {
+      margin-left: 18px;
+      margin-bottom: 10px;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 14px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+    th {
+      background-color: #0f172a;
+      color: #ffffff;
+      text-align: left;
+      padding: 7px 9px;
+      font-weight: 600;
+    }
+    td {
+      padding: 6px 9px;
+      border-bottom: 1px solid #cbd5e1;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+    .callout {
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      padding: 10px 14px;
+      border-radius: 4px;
+      margin: 10px 0 14px 0;
+      page-break-inside: avoid;
+    }
+    .callout-soc {
+      background: #fef2f2;
+      border-left: 4px solid #dc2626;
+      padding: 10px 14px;
+      border-radius: 4px;
+      margin: 10px 0 14px 0;
+      page-break-inside: avoid;
+    }
+    .callout strong, .callout-soc strong {
+      display: block;
+      margin-bottom: 3px;
+      color: #0f172a;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 8.3pt;
+      overflow-x: auto;
+      margin: 8px 0 12px 0;
+      page-break-inside: avoid;
+    }
+    code {
+      font-family: Consolas, 'Courier New', monospace;
+      background: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 8.8pt;
+      color: #be123c;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    .figure {
+      margin: 12px 0 16px 0;
+      text-align: center;
+      page-break-inside: avoid;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px;
+      background: #f8fafc;
+    }
+    .figure img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+    .figure-caption {
+      font-size: 8.6pt;
+      color: #475569;
+      margin-top: 6px;
+      font-style: italic;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 8pt;
+      font-weight: 700;
+    }
+    .badge-noc { background: #dbeafe; color: #1e40af; }
+    .badge-soc { background: #fee2e2; color: #991b1b; }
+    .badge-ok  { background: #dcfce7; color: #166534; }
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cover-header">
+    <div class="subtitle">Ingénierie DevOps, Administration Systèmes & Cybersécurité Réseau</div>
+    <h1>Architecture de Référence & Implémentation d'un Système d'Observabilité NOC / SOC à 360°</h1>
+    <p>Conception en 4 couches logiques, simulation réseau SDN Open vSwitch avec Port Miroir (SPAN), détection d'intrusions Suricata IDS, cluster Kubernetes Cloud-Native (Kind), stockage haute performance (VictoriaMetrics, Loki, ClickHouse) et Alerting unifié sous Grafana.</p>
+    <div class="meta-grid">
+      <div class="meta-item">
+        <strong>Auteur</strong>
+        Mouhamet Barry (eMb0811)
+      </div>
+      <div class="meta-item">
+        <strong>Environnement Labo</strong>
+        VMware Workstation (Ubuntu 22.04 LTS — 192.168.126.100)
+      </div>
+      <div class="meta-item">
+        <strong>Dépôt GitHub</strong>
+        github.com/eMb0811/architecture-noc-soc-360-lab
+      </div>
+    </div>
+  </div>
+
+  <h2>1. Introduction et Vision Architecturale (NOC + SOC Unifiés)</h2>
+  <p>Dans les infrastructures modernes, séparer les outils du <strong>NOC (Network Operations Center — performance et disponibilité)</strong> de ceux du <strong>SOC (Security Operations Center — détection d'intrusions et forensics)</strong> crée des silos critiques. Lorsqu'un serveur subit une dégradation de performance ou un pic de trafic, l'administrateur doit pouvoir déterminer en quelques secondes s'il s'agit d'une panne applicative ou d'une cyberattaque en cours.</p>
+  <p>Ce projet implémente une <strong>architecture d'observabilité à 360° structurée en 4 couches logiques</strong>, optimisée pour consommer seulement <strong>1,5 Go de RAM au total</strong> tout en offrant les mêmes capacités d'analyse temps réel et d'investigation post-incident (Forensics) qu'un SOC d'entreprise.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Couche Logique</th>
+        <th>Brique Initiale Classique</th>
+        <th>Choix Retenu & Optimisé</th>
+        <th>Justification Technique (DevOps / NetSecOps)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Couche 1 : Réseau & Endpoints</strong></td>
+        <td>Switch Physique SPAN + Telegraf + Promtail</td>
+        <td><strong>Mininet (Open vSwitch SPAN <code>span0</code>) + Kind (K8s) + Grafana Alloy</strong></td>
+        <td>Promtail étant déprécié, <strong>Grafana Alloy</strong> unifie la collecte des métriques et des logs en un seul binaire. Mininet émule le moteur réseau d'OpenStack (OVS) avec un vrai Port Miroir sans saturer le CPU.</td>
+      </tr>
+      <tr>
+        <td><strong>Couche 2 : Sonde Réseau (NDR/IDS)</strong></td>
+        <td>Suricata IDS + ntopng</td>
+        <td><strong>Suricata IDS (<code>-i span0 -k none</code>) + Export Flux JSON</strong></td>
+        <td>Écoute passive en réception (<code>RX</code>) sur le port miroir <code>span0</code> du switch Open vSwitch. Détecte en temps réel les injections SQL, scanners Web et scans de ports Nmap.</td>
+      </tr>
+      <tr>
+        <td><strong>Couche 3 : Stockage Spécialisé</strong></td>
+        <td>InfluxDB + ClickHouse + Loki</td>
+        <td><strong>VictoriaMetrics + ClickHouse + Grafana Loki</strong></td>
+        <td><strong>VictoriaMetrics</strong> remplace InfluxDB avec une compatibilité totale Prometheus/Influx et une empreinte mémoire 4 fois inférieure. <strong>ClickHouse</strong> stocke les flux Forensics (<code>ntopng.flows</code>) et <strong>Loki</strong> indexe les alertes et journaux.</td>
+      </tr>
+      <tr>
+        <td><strong>Couche 4 : Tour de Contrôle</strong></td>
+        <td>Grafana + Alerting</td>
+        <td><strong>Grafana 11 + Provisioning As-Code (Dashboards & Alertes)</strong></td>
+        <td>Interface unique corrélant sur un seul écran les 3 bases de données et pilotant le moteur d'alerte multi-sources.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>2. Implémentation des Couches 1 & 2 : Réseau Virtuel, Port Miroir OVS et Sonde Suricata</h2>
+  <p>Le script Python <code>02-network-mininet/topology_noc_soc.py</code> construit une topologie d'entreprise autour d'un commutateur cœur <strong>Open vSwitch (<code>s1</code>)</strong> reliant trois espaces de noms réseau (<em>Network Namespaces</em>) :</p>
+  <ul>
+    <li><code>h1_web</code> (<code>10.0.0.10/24</code>) : Serveur Web HTTP de production (cible des requêtes et des attaques).</li>
+    <li><code>h2_db</code> (<code>10.0.0.20/24</code>) : Serveur de base de données interne.</li>
+    <li><code>h3_atk</code> (<code>10.0.0.99/24</code>) : Machine attaquante exécutant les scénarios de reconnaissance (<code>Nmap</code>) et d'exploitation Web (<code>sqlmap</code>, <code>BlackSun</code>).</li>
+  </ul>
+
+  <div class="callout">
+    <strong>💡 Trois défis d'ingénierie système & réseau résolus lors du déploiement :</strong>
+    <ol>
+      <li><strong>Câble virtuel <code>veth</code> (<code>span0-ovs &lt;---&gt; span0</code>) pour le Port Mirroring OVS :</strong> Une sonde IDS comme Suricata (via <code>AF_PACKET</code>) capture uniquement les paquets entrants (<code>RX</code>). Une interface Linux de type <code>dummy</code> jetant les paquets en émission (<code>TX</code>), nous avons créé une paire <code>veth</code> dont l'extrémité <code>span0-ovs</code> est branchée sur le miroir du switch <code>s1</code>, faisant arriver 100 % des paquets dupliqués en réception (<code>RX</code>) sur <code>span0</code>.</li>
+      <li><strong>Gestion du Checksum Offloading virtuel (<code>suricata -i span0 -k none</code>) :</strong> Dans les espaces de noms Linux, le calcul des sommes de contrôle TCP est différé par le noyau. L'option <code>-k none</code> garantit que Suricata inspecte la couche 7 (HTTP/SQLi) sans écarter les trames virtuelles.</li>
+      <li><strong>Respect de la constante noyau <code>IFNAMSIZ</code> (15 caractères max) :</strong> Le nommage <code>h3_atk</code> (interface <code>h3_atk-eth0</code> de 11 caractères) respecte la limite stricte de 15 octets imposée par le noyau Linux.</li>
+    </ol>
+  </div>
+
+  <div class="figure">
+    <img src="docs/screenshots/01-grafana-noc-soc-dashboard.png" alt="Tour de Contrôle NOC/SOC 360° dans Grafana" />
+    <div class="figure-caption">Figure 1 — Tour de Contrôle Unifiée NOC / SOC 360° dans Grafana (192.168.126.100:3000) corrélant VictoriaMetrics, Loki (Alertes Suricata IDS + Logs Kubernetes Kind) et ClickHouse (Forensics Réseau).</div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2>3. Couche 2 & 3 : Collecte Unifiée (Grafana Alloy) et Stockage Polyglotte</h2>
+  <p>Plutôt que de maintenir deux agents distincts (Telegraf + Promtail) sur chaque machine, notre architecture déploie <strong>Grafana Alloy</strong> (fichier <code>01-central-stack/alloy/config.alloy</code>). Son interface native sur le port <code>12345</code> permet de visualiser et déboguer en direct la santé de chaque pipeline d'ingestion :</p>
+
+  <div class="figure">
+    <img src="docs/screenshots/02-grafana-alloy-pipeline.png" alt="Graphe du pipeline Grafana Alloy" />
+    <div class="figure-caption">Figure 2 — Graphe temps réel de l'agent unifié Grafana Alloy (192.168.126.100:12345/graph) montrant les 7 composants à l'état Healthy.</div>
+  </div>
+
+  <h3>Architecture des 3 Bases de Données Provisionnées Automatiquement</h3>
+  <p>Grâce au fichier <code>01-central-stack/grafana/provisioning/datasources/datasources.yml</code>, Grafana se connecte dès son démarrage aux trois moteurs de stockage spécialisés :</p>
+  <ul>
+    <li><span class="badge badge-noc">NOC — Séries Temporelles</span> <strong>VictoriaMetrics (Port 8428) :</strong> Reçoit les métriques hôtes et réseau via le protocole Prometheus Remote Write.</li>
+    <li><span class="badge badge-soc">SOC — Logs & Alertes</span> <strong>Grafana Loki (Port 3100) :</strong> Indexe les flux JSON temps réel de Suricata (<code>/var/log/suricata/eve.json</code>), les journaux système (<code>/var/log/syslog</code>) et les sorties standards de tous les conteneurs Docker et Pods Kubernetes (<code>Kind</code>).</li>
+    <li><span class="badge badge-ok">Forensics — Big Data</span> <strong>ClickHouse (Ports 8123 / 9000) :</strong> Base orientée colonnes stockant la table analytique <code>ntopng.flows</code> pour les investigations réseau sur de longues périodes.</li>
+  </ul>
+
+  <div class="figure">
+    <img src="docs/screenshots/04-grafana-datasources.png" alt="Sources de données Grafana provisionnées" />
+    <div class="figure-caption">Figure 3 — Les trois sources de données (ClickHouse, Loki, VictoriaMetrics) provisionnées automatiquement dans Grafana.</div>
+  </div>
+
+  <div class="figure">
+    <img src="docs/screenshots/03-victoriametrics-vmui.png" alt="VictoriaMetrics VMUI" />
+    <div class="figure-caption">Figure 4 — Interface analytique VictoriaMetrics VMUI (192.168.126.100:8428/vmui) exécutant une requête PromQL sur le débit réseau des interfaces.</div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2>4. Couche 4 : Comment Gérer l'Alerting NOC / SOC de Bout en Bout</h2>
+  <p>Un système d'observabilité n'est complet que s'il est capable d'alerter les équipes d'astreinte et de déclencher des actions automatiques sans intervention humaine. Dans notre architecture, l'alerting est géré en <strong>Alerting-as-Code</strong> via le fichier <code>01-central-stack/grafana/provisioning/alerting/alerts.yml</code>.</p>
+
+  <div class="figure">
+    <img src="docs/screenshots/05-grafana-alerting-rules.png" alt="Règles d'Alerting NOC/SOC dans Grafana" />
+    <div class="figure-caption">Figure 5 — Moteur d'Alerting Unifié Grafana (192.168.126.100:3000/alerting/list) avec les 3 règles NOC et SOC provisionnées automatiquement.</div>
+  </div>
+
+  <h3>Les 3 Briques de Gestion de l'Alerting dans Grafana</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Brique d'Alerting</th>
+        <th>Rôle Fonctionnel</th>
+        <th>Implémentation dans notre Architecture NOC/SOC</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Règles d'Alerte<br/>(<em>Alert Rules</em>)</strong></td>
+        <td>Évaluent périodiquement une requête PromQL (VictoriaMetrics), LogQL (Loki) ou SQL (ClickHouse) par rapport à un seuil.</td>
+        <td>
+          • <strong>Règle SOC Critique :</strong> <code>sum(count_over_time({job="suricata-ids"} |= "\"event_type\":\"alert\"" [10m])) &gt; 0</code> (Déclenchement immédiat <code>for: 0s</code> dès qu'une attaque est vue sur <code>span0</code>).<br/>
+          • <strong>Règle NOC CPU :</strong> Charge CPU &gt; 85 % pendant <code>1m</code>.<br/>
+          • <strong>Règle NOC RAM :</strong> Mémoire utilisée &gt; 90 % pendant <code>2m</code>.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>2. Points de Contact<br/>(<em>Contact Points</em>)</strong></td>
+        <td>Définissent les canaux de destination où les notifications sont poussées.</td>
+        <td>
+          • <strong>ChatOps :</strong> Discord, Slack, Microsoft Teams, Telegram ou Email SMTP.<br/>
+          • <strong>SOAR / Remédiation Active :</strong> Webhook HTTP envoyant le JSON de l'alerte vers un script Python ou <strong>n8n</strong> pour bloquer automatiquement l'IP attaquante sur Open vSwitch (<code>ovs-ofctl add-flow s1 ip,nw_src=&lt;IP&gt;,actions=drop</code>).
+        </td>
+      </tr>
+      <tr>
+        <td><strong>3. Politiques de Routage<br/>(<em>Notification Policies</em>)</strong></td>
+        <td>Aiguillent chaque alerte vers le bon canal selon ses étiquettes (<code>labels</code>) et gèrent le regroupement.</td>
+        <td>
+          • Si <code>layer=soc</code> &amp; <code>severity=critical</code> ➔ Envoi immédiat à l'astreinte Cybersécurité.<br/>
+          • Si <code>layer=noc</code> ➔ Regroupement par hôte (<code>group_wait: 30s</code>) vers l'équipe Infrastructure pour éviter la fatigue d'alerte (<em>Alert Fatigue</em>).
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout-soc">
+    <strong>🚨 Exemple de Remédiation Active (SOAR) sur le Switch Open vSwitch :</strong>
+    Lorsque la règle <code>[SOC-CRITICAL] Intrusion Réseau Détectée par Suricata IDS</code> passe à l'état <strong>Firing</strong> suite à un scan Nmap ou une injection SQL depuis <code>10.0.0.99</code>, le Webhook Grafana peut exécuter automatiquement sur le switch Open vSwitch <code>s1</code> :
+    <pre><code>sudo ovs-ofctl add-flow s1 "priority=500,ip,nw_src=10.0.0.99,actions=drop"</code></pre>
+    L'attaquant est alors instantanément isolé au niveau de la couche 2/3 du réseau avant même d'avoir pu compromettre la base de données <code>h2_db</code>.
+  </div>
+
+  <h2>5. Conclusion et Reproductibilité (GitOps)</h2>
+  <p>L'intégralité du code source, des scripts de simulation réseau Mininet, des manifestes Kubernetes Kind et des fichiers de provisioning Grafana (Sources de données, Tableaux de bord JSON et Règles d'Alerting) est versionnée et disponible sur le dépôt GitHub officiel :</p>
+  <pre><code>https://github.com/eMb0811/architecture-noc-soc-360-lab</code></pre>
+
+</body>
+</html>

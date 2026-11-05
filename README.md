@@ -160,3 +160,24 @@ H3_PID=$(pgrep -f "mininet:h3_atk" | head -n1)
 sudo mnexec -a $H3_PID bash 04-sonde-ids/simulate_attacks.sh 10.0.0.10
 ```
 Ouvrez **Grafana (`http://192.168.126.100:3000`)** : les alertes Suricata, le pic réseau Open vSwitch et les flux Forensics s'affichent instantanément !
+
+---
+
+## 🔔 5. Gestion de l'Alerting Unifié NOC / SOC (Détection & Notification)
+
+Dans cette architecture, l'alerting est centralisé dans **Grafana Unified Alerting** et entièrement automatisé par fichier déclaratif (*Alerting-as-Code*) dans [`01-central-stack/grafana/provisioning/alerting/alerts.yml`](01-central-stack/grafana/provisioning/alerting/alerts.yml).
+
+![Règles d'Alerting NOC/SOC Provisionnées dans Grafana](docs/screenshots/05-grafana-alerting-rules.png)
+
+### Architecture de l'Alerting en 3 Briques :
+1. **Règles de Détection Multi-Sources (*Alert Rules*) :**
+   * **`[SOC-CRITICAL] Intrusion Réseau Détectée par Suricata IDS`** : Interroge **Loki** (`sum(count_over_time({job="suricata-ids"} |= "\"event_type\":\"alert\"" [10m])) > 0`) et déclenche immédiatement (`for: 0s`) dès qu'une attaque traverse le port miroir `span0`.
+   * **`[NOC-WARNING] Saturation CPU Serveur / Cluster Kind (> 85%)`** : Interroge **VictoriaMetrics** sur une fenêtre glissante de 2 minutes avec temporisation (`for: 1m`) pour éviter les faux positifs liés aux micro-pics.
+   * **`[NOC-WARNING] Consommation Mémoire RAM Critique (> 90%)`** : Surveillance proactive de la saturation mémoire avant déclenchement de l'OOM Killer Linux.
+2. **Points de Contact (*Contact Points*) :**
+   * **Canaux Humains (ChatOps) :** Envoi enrichi vers **Discord, Slack, Microsoft Teams, Telegram ou Email (SMTP)** avec le résumé de l'attaque, l'IP source et le lien direct vers Grafana.
+   * **Canal Automatisé (SOAR / Remédiation Active) :** Envoi d'un payload JSON via **Webhook** vers un orchestrateur (**n8n**, **Shuffle**, ou script Python) pour isoler automatiquement l'IP attaquante sur le switch Open vSwitch (`ovs-ofctl add-flow s1 ip,nw_src=<IP_ATTAQUANT>,actions=drop`) ou le pare-feu pfSense.
+3. **Politiques de Routage (*Notification Policies*) :**
+   * Les alertes portant le label `layer=soc` + `severity=critical` sont routées sans délai (`group_wait: 0s`) vers l'équipe **SecOps**.
+   * Les alertes portant le label `layer=noc` sont regroupées par équipement (`group_by: ['host']`, `group_wait: 30s`) vers l'équipe **NetOps/SRE** afin d'éviter la tempête de notifications (*Alert Fatigue*).
+

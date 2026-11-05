@@ -1,0 +1,146 @@
+# ==============================================================================
+# PROVISIONING AUTOMATIQUE DE L'ALERTING UNIFIÉ GRAFANA (NOC & SOC)
+# ==============================================================================
+# Rôle pédagogique :
+# Dans une architecture NOC/SOC moderne, l'alerting repose sur 3 piliers :
+#   1. Alert Rules (Règles de détection sur Loki, VictoriaMetrics, ClickHouse)
+#   2. Contact Points (Canaux de diffusion : Slack, Teams, Discord, Email, Webhook SOAR)
+#   3. Notification Policies (Routage intelligent selon que l'alerte est NOC ou SOC)
+# ==============================================================================
+
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: SOC-Security-Intrusion-Rules
+    folder: Alertes NOC-SOC 360
+    interval: 1m
+    rules:
+      # ------------------------------------------------------------------------
+      # RÈGLE SOC #1 : Détection d'Intrusion Suricata IDS sur le Port Miroir (span0)
+      # ------------------------------------------------------------------------
+      - uid: soc-suricata-intrusion-rule
+        title: "[SOC-CRITICAL] Intrusion Réseau Détectée par Suricata IDS (Port Miroir span0)"
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: OK
+        annotations:
+          summary: "Attaque réseau détectée sur le switch Open vSwitch (s1 -> span0) par Suricata IDS"
+          description: "Une ou plusieurs signatures d'attaque (Injection SQL sqlmap, Scanner BlackSun ou Reconnaissance Nmap) ont été interceptées dans /var/log/suricata/eve.json."
+        labels:
+          layer: soc
+          severity: critical
+          team: secops
+        data:
+          - refId: A
+            datasourceUid: loki-uid
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              expr: 'sum(count_over_time({job="suricata-ids"} |= "\"event_type\":\"alert\"" [10m]))'
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+
+      # ------------------------------------------------------------------------
+      # RÈGLE NOC #2 : Saturation CPU Hôte / Nœud Kubernetes (> 85%)
+      # ------------------------------------------------------------------------
+      - uid: noc-cpu-saturation-rule
+        title: "[NOC-WARNING] Saturation CPU Serveur / Cluster Kind (> 85%)"
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: OK
+        annotations:
+          summary: "Charge CPU critique (> 85%) détectée via VictoriaMetrics"
+          description: "L'utilisation CPU globale dépasse 85%. Vérifiez les conteneurs Docker et les Pods Kubernetes (Kind)."
+        labels:
+          layer: noc
+          severity: warning
+          team: netops
+        data:
+          - refId: A
+            datasourceUid: victoriametrics-uid
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100)'
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [85]
+              refId: C
+
+      # ------------------------------------------------------------------------
+      # RÈGLE NOC #3 : Consommation Mémoire Vive RAM Critique (> 90%)
+      # ------------------------------------------------------------------------
+      - uid: noc-ram-saturation-rule
+        title: "[NOC-WARNING] Consommation Mémoire RAM Critique (> 90%)"
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: OK
+        annotations:
+          summary: "Mémoire RAM disponible inférieure à 10%"
+          description: "La consommation mémoire de l'hôte dépasse le seuil de sécurité de 90%."
+        labels:
+          layer: noc
+          severity: warning
+          team: netops
+        data:
+          - refId: A
+            datasourceUid: victoriametrics-uid
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              expr: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100'
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [90]
+              refId: C
