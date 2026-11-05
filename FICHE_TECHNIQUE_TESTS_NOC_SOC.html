@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fiche Technique de Recette & Tests — Architecture NOC/SOC 360°</title>
+  <style>
+    @page { size: A4; margin: 14mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      font-size: 9.8pt;
+      line-height: 1.45;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 15px;
+    }
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
+      color: #ffffff;
+      padding: 22px 26px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+    }
+    .header .tag {
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 1.3px;
+      color: #93c5fd;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .header h1 { font-size: 17pt; font-weight: 800; margin-bottom: 6px; }
+    .header p { font-size: 9.3pt; color: #e2e8f0; }
+    h2 {
+      font-size: 12pt;
+      color: #0f172a;
+      background: #f1f5f9;
+      border-left: 4px solid #2563eb;
+      padding: 6px 10px;
+      margin-top: 16px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+    h3 { font-size: 10pt; color: #1d4ed8; margin-top: 8px; margin-bottom: 4px; }
+    p { margin-bottom: 6px; }
+    ul, ol { margin-left: 18px; margin-bottom: 8px; }
+    li { margin-bottom: 3px; }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 8px 11px;
+      border-radius: 6px;
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 8.2pt;
+      overflow-x: auto;
+      margin: 6px 0 10px 0;
+      page-break-inside: avoid;
+    }
+    code {
+      font-family: Consolas, 'Courier New', monospace;
+      background: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 8.5pt;
+      color: #be123c;
+    }
+    pre code { background: transparent; color: inherit; padding: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px 0;
+      font-size: 8.8pt;
+      page-break-inside: avoid;
+    }
+    th { background: #0f172a; color: #ffffff; text-align: left; padding: 6px 8px; }
+    td { padding: 5px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    .expected {
+      background: #f0fdf4;
+      border-left: 4px solid #16a34a;
+      padding: 7px 11px;
+      border-radius: 4px;
+      margin: 6px 0 10px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+    .soc-box {
+      background: #fef2f2;
+      border-left: 4px solid #dc2626;
+      padding: 8px 11px;
+      border-radius: 4px;
+      margin: 6px 0 10px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="tag">Runbook Opérationnel & Cahier de Recette Technique</div>
+    <h1>📋 Fiche Technique de Test — Labo NOC / SOC 360°</h1>
+    <p>Procédure pas-à-pas pour tester et démontrer les 4 couches de l'architecture : Réseau SDN Mininet Open vSwitch (Port Miroir <code>span0</code>), Cluster Kubernetes (<code>Kind</code>), Sonde Suricata IDS, Collecte Grafana Alloy, Bases VictoriaMetrics / Loki / ClickHouse, Alerting et Remédiation Active.</p>
+  </div>
+
+  <table>
+    <tbody>
+      <tr>
+        <td><strong>Machine Virtuelle Cible</strong></td>
+        <td><code>NOC-SOC-360-Lab</code> — IP : <code>192.168.126.100</code> (Ubuntu 22.04 LTS sous VMware Workstation)</td>
+      </tr>
+      <tr>
+        <td><strong>Connexion SSH (Windows)</strong></td>
+        <td><code>ssh -i "C:\workspace\ops\tp3-admin_reseaux\ssh\tp3_ed25519" root@192.168.126.100</code> (Mot de passe : <code>Passer@2026</code>)</td>
+      </tr>
+      <tr>
+        <td><strong>Interfaces Web Directes</strong></td>
+        <td>
+          • <strong>Grafana Dashboard 360° :</strong> <code>http://192.168.126.100:3000/d/noc-soc-360-main</code><br/>
+          • <strong>Grafana Alerting :</strong> <code>http://192.168.126.100:3000/alerting/list?view=list</code><br/>
+          • <strong>Grafana Alloy Pipeline :</strong> <code>http://192.168.126.100:12345/graph</code><br/>
+          • <strong>VictoriaMetrics VMUI :</strong> <code>http://192.168.126.100:8428/vmui</code>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>TEST 1 — Vérifier le Serveur Central Docker et le Pipeline Grafana Alloy</h2>
+  <pre><code>cd /opt/noc-soc-lab/01-central-stack
+docker compose ps</code></pre>
+  <div class="expected">
+    <strong>✅ Résultat attendu :</strong> Les 5 conteneurs (<code>noc-victoriametrics</code>, <code>soc-loki</code>, <code>noc-clickhouse</code>, <code>noc-soc-alloy</code>, <code>noc-soc-grafana</code>) sont à l'état <strong>Up</strong>. Sur <code>http://192.168.126.100:12345/graph</code>, les 7 composants Alloy affichent le badge vert <strong>Healthy</strong>.
+  </div>
+
+  <h2>TEST 2 — Vérifier la Topologie Réseau Mininet & le Port Miroir Open vSwitch (span0)</h2>
+  <pre><code># 1. Vérifier le switch Open vSwitch s1 et son miroir SPAN
+sudo ovs-vsctl show
+sudo ovs-vsctl list Mirror
+ip -br link show span0
+
+# 2. Tester le ping interne depuis l'attaquant h3_atk (10.0.0.99) vers h1_web (10.0.0.10)
+H3_PID=$(pgrep -f "mininet:h3_atk" | head -n1)
+sudo mnexec -a $H3_PID ping -c 2 10.0.0.10
+
+# 3. Prouver que le port miroir span0 reçoit bien une copie de chaque paquet
+sudo mnexec -a $H3_PID ping -c 2 10.0.0.10 >/dev/null &
+sudo tcpdump -i span0 -n icmp -c 4</code></pre>
+  <div class="expected">
+    <strong>✅ Résultat attendu :</strong> <code>0% packet loss</code> et <code>tcpdump -i span0</code> affiche les requêtes/réponses ICMP entre <code>10.0.0.99</code> et <code>10.0.0.10</code>, prouvant que la duplication matérielle (SPAN) fonctionne.
+  </div>
+
+  <h2>TEST 3 — Vérifier le Cluster Kubernetes (Kind) et les Pods Métiers</h2>
+  <pre><code>kubectl get nodes -o wide
+kubectl get pods -A
+curl -I http://localhost:8080</code></pre>
+  <div class="expected">
+    <strong>✅ Résultat attendu :</strong> Le nœud <code>noc-soc-k8s-control-plane</code> est <strong>Ready</strong>, les 2 Pods <code>intranet-web</code> sont <strong>1/1 Running</strong> et <code>curl -I http://localhost:8080</code> retourne <strong>HTTP/1.1 200 OK</strong>.
+  </div>
+
+  <h2>TEST 4 — Générer du Trafic NOC et Vérifier les Métriques dans VictoriaMetrics</h2>
+  <pre><code>H3_PID=$(pgrep -f "mininet:h3_atk" | head -n1)
+for i in {1..20}; do
+  sudo mnexec -a $H3_PID curl -s http://10.0.0.10/ >/dev/null
+  curl -s http://localhost:8080/ >/dev/null
+done</code></pre>
+  <div class="expected">
+    <strong>✅ Résultat attendu :</strong> Dans VictoriaMetrics VMUI (<code>http://192.168.126.100:8428/vmui</code>) ou Grafana, la requête PromQL <code>rate(node_network_receive_bytes_total{device=~"span0|s1.*|eth0"}[1m])</code> affiche la hausse immédiate du débit réseau.
+  </div>
+
+  <h2>TEST 5 — Simuler les Cyberattaques (SOC) et Vérifier Suricata IDS + Loki</h2>
+  <pre><code># Lancer le scénario d'attaque (Scanner BlackSun + Injection SQL sqlmap + Scan Nmap)
+H3_PID=$(pgrep -f "mininet:h3_atk" | head -n1)
+sudo mnexec -a $H3_PID bash /opt/noc-soc-lab/04-sonde-ids/simulate_attacks.sh 10.0.0.10
+
+# Vérifier les alertes générées en temps réel par Suricata
+sudo tail -n 10 /var/log/suricata/fast.log</code></pre>
+  <div class="soc-box">
+    <strong>🚨 Résultat attendu dans <code>fast.log</code> et dans Grafana (Panneau Alertes Suricata IDS) :</strong><br/>
+    • <code>[SOC-CRITICAL] Detection Scanner Malveillant BlackSun {TCP} 10.0.0.99 -&gt; 10.0.0.10:80</code><br/>
+    • <code>[SOC-CRITICAL] Tentative Injection SQL (sqlmap detecte) {TCP} 10.0.0.99 -&gt; 10.0.0.10:80</code><br/>
+    • <code>[SOC-RECON] Scan de Port FTP (Nmap) {TCP} 10.0.0.99 -&gt; 10.0.0.10:21</code><br/>
+    • <code>[SOC-RECON] Scan de Port MySQL (Nmap) {TCP} 10.0.0.99 -&gt; 10.0.0.10:3306</code>
+  </div>
+
+  <h2>TEST 6 — Investigation Forensics Réseau en SQL dans ClickHouse</h2>
+  <pre><code>docker exec noc-clickhouse clickhouse-client -q "
+SELECT src_ip AS Attaquant, dest_ip AS Cible, dest_port AS Port, proto AS Proto,
+       security_status AS Qualification_SOC, count() AS Evenements, sum(bytes_toserver) AS Octets
+FROM ntopng.flows WHERE src_ip = '10.0.0.99'
+GROUP BY src_ip, dest_ip, dest_port, proto, security_status
+ORDER BY Evenements DESC FORMAT PrettyCompact"</code></pre>
+  <div class="expected">
+    <strong>✅ Résultat attendu :</strong> ClickHouse restitue instantanément le bilan Forensics complet de l'IP attaquante <code>10.0.0.99</code> (ports ciblés, protocole L4/L7 et qualification SOC).
+  </div>
+
+  <h2>TEST 7 — Alerting Grafana & Remédiation Active (Isolation OpenFlow de l'Attaquant)</h2>
+  <pre><code># 1. Bloquer l'IP attaquante 10.0.0.99 au niveau du switch Open vSwitch s1 (priorité 500)
+sudo ovs-ofctl add-flow s1 "priority=500,ip,nw_src=10.0.0.99,actions=drop"
+
+# 2. Vérifier que l'attaquant h3_atk (10.0.0.99) est bloqué à 100%
+H3_PID=$(pgrep -f "mininet:h3_atk" | head -n1)
+sudo mnexec -a $H3_PID ping -c 2 -W 1 10.0.0.10 || echo "--> ATTAQUANT 10.0.0.99 BLOQUÉ PAR LE SOC !"
+
+# 3. Vérifier que le serveur légitime h2_db (10.0.0.20) communique toujours normalement
+H2_PID=$(pgrep -f "mininet:h2_db" | head -n1)
+sudo mnexec -a $H2_PID ping -c 2 10.0.0.10
+
+# 4. Lever la quarantaine après le test
+sudo ovs-ofctl del-flows s1 "ip,nw_src=10.0.0.99"</code></pre>
+  <div class="expected">
+    <strong>✅ Résultat attendu :</strong> L'attaquant <code>10.0.0.99</code> est totalement isolé (100 % packet loss) tandis que le trafic légitime entre <code>h2_db</code> (<code>10.0.0.20</code>) et <code>h1_web</code> (<code>10.0.0.10</code>) continue sans aucune interruption (0 % packet loss).
+  </div>
+
+</body>
+</html>
