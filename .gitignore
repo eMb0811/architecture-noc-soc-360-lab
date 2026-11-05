@@ -1,0 +1,16 @@
+# Données persistantes des conteneurs (ne pas pousser sur GitHub)
+data/
+*.log
+*.pcap
+eve.json
+
+# Fichiers d'environnement locaux et secrets
+.env
+
+# Fichiers systèmes et IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+__pycache__/
+*.pyc

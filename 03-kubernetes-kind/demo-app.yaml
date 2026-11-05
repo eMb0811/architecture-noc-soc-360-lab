@@ -1,0 +1,50 @@
+# ==============================================================================
+# APPLICATION MÉTIER DE DÉMONSTRATION DANS KUBERNETES
+# ==============================================================================
+# Déploie un serveur web Nginx léger dont les logs et métriques sont
+# automatiquement capturés par Grafana Alloy et envoyés vers Loki & Grafana.
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intranet-web
+  labels:
+    app: intranet-web
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: intranet-web
+  template:
+    metadata:
+      labels:
+        app: intranet-web
+        tier: frontend
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "150m"
+              memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: intranet-web-svc
+spec:
+  type: NodePort
+  selector:
+    app: intranet-web
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080

@@ -1,0 +1,36 @@
+# ==============================================================================
+# PROVISIONING AUTOMATIQUE DES SOURCES DE DONNÉES GRAFANA
+# ==============================================================================
+# Rôle pédagogique :
+# Dès que Grafana démarre, il lit ce fichier et connecte automatiquement :
+# 1. VictoriaMetrics (comme source Prometheus par défaut)
+# 2. Grafana Loki (pour les logs et alertes Suricata)
+# 3. ClickHouse (pour les flux réseau ntopng)
+# Aucune configuration manuelle dans l'interface web n'est nécessaire !
+# ==============================================================================
+
+apiVersion: 1
+
+datasources:
+  - name: VictoriaMetrics (Métriques NOC)
+    type: prometheus
+    access: proxy
+    url: http://victoriametrics:8428
+    isDefault: true
+    editable: true
+
+  - name: Loki (Logs & Alertes SOC Suricata)
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+
+  - name: ClickHouse (Flux Réseau ntopng)
+    type: grafana-clickhouse-datasource
+    jsonData:
+      defaultDatabase: ntopng
+      port: 9000
+      server: clickhouse
+      username: default
+      protocol: native
+    editable: true

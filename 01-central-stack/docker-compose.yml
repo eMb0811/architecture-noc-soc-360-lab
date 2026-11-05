@@ -1,0 +1,139 @@
+# ==============================================================================
+# COUCHE 3 & 4 : SERVEUR CENTRAL NOC/SOC (Docker Compose)
+# ==============================================================================
+# Rôle pédagogique :
+# Ce fichier déploie le "Cerveau de Stockage et de Visualisation" de notre
+# architecture. Il est optimisé pour consommer moins de 2.5 Go de RAM au total
+# afin de tourner fluidement sur un processeur i7-6600U (2 coeurs / 20 Go RAM).
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. VICTORIAMETRICS : Base de données Séries Temporelles (Remplace InfluxDB)
+  # ----------------------------------------------------------------------------
+  # Pourquoi ? 100% compatible avec Prometheus ET InfluxDB, mais consomme 4x
+  # moins de RAM. Il stocke le CPU, la RAM, le trafic des interfaces et l'état K8s.
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.106.1
+    container_name: noc-victoriametrics
+    restart: unless-stopped
+    ports:
+      - "8428:8428" # Port HTTP pour l'écriture (Alloy/Telegraf) et la lecture (Grafana)
+    command:
+      - "--storageDataPath=/storage"
+      - "--retentionPeriod=30d" # Garde 30 jours d'historique de métriques
+      - "--httpListenAddr=:8428"
+    volumes:
+      - vm_data:/storage
+    networks:
+      - noc-soc-net
+
+  # ----------------------------------------------------------------------------
+  # 2. GRAFANA LOKI : Base de données de Logs et d'Alertes Sécurité (SOC)
+  # ----------------------------------------------------------------------------
+  # Pourquoi ? Contrairement à Elasticsearch qui indexe chaque mot (et demande
+  # 16 Go de RAM), Loki n'indexe que les étiquettes (ex: host="h1", app="suricata")
+  # et compresse le reste. Il reçoit les logs Linux, Kubernetes et Suricata (eve.json).
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: soc-loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - noc-soc-net
+
+  # ----------------------------------------------------------------------------
+  # 3. CLICKHOUSE : Base Analytique Big Data pour les Flux Réseau (ntopng)
+  # ----------------------------------------------------------------------------
+  # Pourquoi ? Base orientée colonnes ultra-rapide. Quand ntopng analyse des
+  # milliers de connexions (Qui parle à Qui, Quel Port, Quel Volume), il les
+  # archive ici pour l'investigation Forensics post-incident.
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    container_name: noc-clickhouse
+    restart: unless-stopped
+    ports:
+      - "8123:8123" # Port HTTP API
+      - "9000:9000" # Port natif TCP (utilisé par ntopng)
+    environment:
+      - CLICKHOUSE_DB=ntopng
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - noc-soc-net
+
+  # ----------------------------------------------------------------------------
+  # 4. GRAFANA ALLOY : L'Agent Unifié (Remplace Telegraf + Promtail)
+  # ----------------------------------------------------------------------------
+  # Pourquoi ? Un seul agent moderne qui collecte à la fois :
+  # - Les métriques du serveur hôte (CPU, RAM, Disque, Réseau) -> vers VictoriaMetrics
+  # - Les logs des conteneurs Docker & du système -> vers Loki
+  # - Les alertes d'attaque de Suricata (/var/log/suricata/eve.json) -> vers Loki
+  alloy:
+    image: grafana/alloy:v1.4.3
+    container_name: noc-soc-alloy
+    restart: unless-stopped
+    ports:
+      - "12345:12345" # Interface graphique de debug d'Alloy !
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/log:/var/log:ro # Permet de lire Syslog et Suricata (/var/log/suricata/eve.json)
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Permet de découvrir les conteneurs
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    depends_on:
+      - victoriametrics
+      - loki
+    networks:
+      - noc-soc-net
+
+  # ----------------------------------------------------------------------------
+  # 5. GRAFANA : La Tour de Contrôle Unifiée (NOC + SOC)
+  # ----------------------------------------------------------------------------
+  # Pourquoi ? Une seule interface pour corréler visuellement les métriques
+  # (VictoriaMetrics), les alertes d'intrusion (Loki) et les flux (ClickHouse).
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: noc-soc-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - victoriametrics
+      - loki
+      - clickhouse
+    networks:
+      - noc-soc-net
+
+volumes:
+  vm_data:
+  loki_data:
+  clickhouse_data:
+  grafana_data:
+
+networks:
+  noc-soc-net:
+    driver: bridge

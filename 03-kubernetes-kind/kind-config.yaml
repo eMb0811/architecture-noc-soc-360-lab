@@ -1,0 +1,19 @@
+# ==============================================================================
+# CONFIGURATION DU CLUSTER KUBERNETES LOCAL (KIND)
+# ==============================================================================
+# Rôle pédagogique :
+# Kind (Kubernetes IN Docker) lance un vrai cluster Kubernetes dans un seul
+# conteneur Docker. Contrairement à un cluster multi-VM qui consommerait 8 Go
+# de RAM, cette configuration ne consomme que ~600 Mo de RAM !
+# ==============================================================================
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: noc-soc-k8s
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Expose le port NodePort 30080 de Kubernetes sur le port 8080 de la VM
+      - containerPort: 30080
+        hostPort: 8080
+        protocol: TCP

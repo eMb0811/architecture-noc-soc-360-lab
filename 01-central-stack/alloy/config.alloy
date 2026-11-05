@@ -1,0 +1,68 @@
+// =============================================================================
+// CONFIGURATION GRAFANA ALLOY (Agent Unifié Métriques + Logs + Sécurité)
+// =============================================================================
+// Explication pédagogique :
+// Ce fichier remplace à la fois Telegraf et Promtail.
+// Il est divisé en 3 pipelines simples :
+//   1. Collecter les métriques Linux (CPU, RAM, Réseau) -> envoyer à VictoriaMetrics
+//   2. Collecter les logs des conteneurs Docker -> envoyer à Loki
+//   3. Collecter les alertes IDS de Suricata (eve.json) -> envoyer à Loki
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// PIPELINE 1 : MÉTRIQUES SYSTÈME & RÉSEAU (NOC)
+// -----------------------------------------------------------------------------
+prometheus.exporter.unix "host_metrics" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+}
+
+prometheus.scrape "scrape_host" {
+  targets         = prometheus.exporter.unix.host_metrics.targets
+  forward_to      = [prometheus.remote_write.victoriametrics.receiver]
+  scrape_interval = "15s"
+}
+
+prometheus.remote_write "victoriametrics" {
+  endpoint {
+    url = "http://victoriametrics:8428/api/v1/write"
+  }
+}
+
+// -----------------------------------------------------------------------------
+// PIPELINE 2 : LOGS SYSTÈME & SURICATA IDS (SOC)
+// -----------------------------------------------------------------------------
+local.file_match "suricata_and_syslog" {
+  path_targets = [
+    // Logs d'alertes Suricata (générés par le trafic du port miroir Mininet)
+    {"__path__" = "/var/log/suricata/eve.json", "job" = "suricata-ids", "layer" = "soc"},
+    // Logs système de la VM Ubuntu
+    {"__path__" = "/var/log/syslog", "job" = "linux-syslog", "layer" = "noc"},
+  ]
+}
+
+loki.source.file "read_files" {
+  targets    = local.file_match.suricata_and_syslog.targets
+  forward_to = [loki.write.local_loki.receiver]
+}
+
+// -----------------------------------------------------------------------------
+// PIPELINE 3 : LOGS DES CONTENEURS DOCKER & KIND (KUBERNETES)
+// -----------------------------------------------------------------------------
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "docker_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.containers.targets
+  labels     = {"job" = "docker-containers"}
+  forward_to = [loki.write.local_loki.receiver]
+}
+
+// Destination finale de tous les logs : notre serveur Loki
+loki.write "local_loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
